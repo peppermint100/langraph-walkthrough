@@ -75,7 +75,6 @@ async def information_collection_node(state: BlogState) -> Dict[str, Any]:
             "total_sources": collected_content.total_sources,
             "basic_concepts": len(collected_content.basic_concepts),
             "latest_trends": len(collected_content.latest_trends),
-            "practical_cases": len(collected_content.practical_cases),
             "expert_opinions": len(collected_content.expert_opinions),
             "high_quality_sources": len(high_quality_sources),
             "collection_timestamp": collected_content.collection_timestamp
@@ -132,7 +131,6 @@ def validate_collected_content(collected_content: CollectedContent) -> Dict[str,
     type_counts = {
         "basic_concepts": len(collected_content.basic_concepts),
         "latest_trends": len(collected_content.latest_trends),
-        "practical_cases": len(collected_content.practical_cases),
         "expert_opinions": len(collected_content.expert_opinions)
     }
 
@@ -152,7 +150,7 @@ def validate_collected_content(collected_content: CollectedContent) -> Dict[str,
     # 전체 품질 점수 계산
     quality_factors = {
         "source_count": min(1.0, collected_content.total_sources / 10),  # 10개 이상이면 만점
-        "type_balance": 1.0 - (len(empty_types) / 4),  # 타입별 균형
+        "type_balance": 1.0 - (len(empty_types) / 3),  # 타입별 균형 (3개 카테고리)
         "credibility": avg_credibility,  # 평균 신뢰도
         "content_richness": min(1.0, sum(len(source.summary) for source in all_sources) / 1000)  # 내용 풍부함
     }

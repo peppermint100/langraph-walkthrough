@@ -17,7 +17,7 @@ class PerplexityResponse(BaseModel):
 
 
 class PerplexityClient:
-    """Perplexity AI API 클라이언트"""
+    """Perplexity AI API 클라이언트 (정보 수집 + 블로그 글 작성)"""
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
@@ -85,7 +85,6 @@ class PerplexityClient:
         results = {
             ContentType.BASIC_CONCEPT: [],
             ContentType.LATEST_TREND: [],
-            ContentType.PRACTICAL_CASE: [],
             ContentType.EXPERT_OPINION: []
         }
 
@@ -160,6 +159,52 @@ class PerplexityClient:
 
         return min(1.0, score)
 
+    async def generate_blog_post(self, prompt: str, topic: str) -> PerplexityResponse:
+        """sonar-pro 모델을 사용하여 블로그 포스트 생성"""
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                payload = {
+                    "model": "sonar-pro",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "max_tokens": 4000,
+                    "temperature": 0.3,
+                    "top_p": 0.9
+                }
+
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=self.headers,
+                    json=payload
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                content = data["choices"][0]["message"]["content"]
+
+                return PerplexityResponse(
+                    content=content,
+                    sources=[],  # 블로그 작성 시에는 소스 정보 불필요
+                    query=f"블로그 글 작성: {topic}"
+                )
+
+        except httpx.HTTPError as e:
+            logger.error(f"sonar-pro 블로그 작성 API 호출 실패: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.text
+                    logger.error(f"API 응답 내용: {error_detail}")
+                except:
+                    logger.error("응답 내용을 읽을 수 없습니다")
+            raise
+        except Exception as e:
+            logger.error(f"예상치 못한 오류: {e}")
+            raise
+
     def create_search_queries(self, topic: str) -> List[SearchQuery]:
         """주제에 따른 다양한 검색 쿼리 생성"""
         return [
@@ -171,11 +216,6 @@ class PerplexityClient:
             SearchQuery(
                 query=f"{topic} 2024 최신 트렌드 동향 뉴스",
                 content_type=ContentType.LATEST_TREND,
-                max_results=4
-            ),
-            SearchQuery(
-                query=f"{topic} 실무 활용 방법 사례 예시",
-                content_type=ContentType.PRACTICAL_CASE,
                 max_results=4
             ),
             SearchQuery(

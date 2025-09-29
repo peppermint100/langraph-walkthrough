@@ -8,10 +8,14 @@ from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from .models.state import BlogState, WorkflowStatus
-from .models.content_models import ContentType
-from .nodes.information_collection import information_collection_node
-from .nodes.blog_writing import blog_writing_node
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.models.state import BlogState, WorkflowStatus
+from src.models.content_models import ContentType
+from src.nodes.information_collection import information_collection_node
+from src.nodes.blog_writing import blog_writing_node
 
 
 # 환경 변수 로드
@@ -224,7 +228,6 @@ async def save_blog_result(state: BlogState, output_dir: str) -> str:
 - **총 소스 수**: {state.collected_content.total_sources}
 - **기본 개념**: {len(state.collected_content.basic_concepts)}개
 - **최신 트렌드**: {len(state.collected_content.latest_trends)}개
-- **활용 사례**: {len(state.collected_content.practical_cases)}개
 - **전문가 의견**: {len(state.collected_content.expert_opinions)}개
 
 ### 처리 로그

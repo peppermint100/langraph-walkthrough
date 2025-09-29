@@ -39,11 +39,11 @@ async def blog_writing_node(state: BlogState) -> Dict[str, Any]:
 
         state.update_progress("콘텐츠 품질 검증 완료", 20)
 
-        # Perplexity로 블로그 글 작성
+        # sonar-pro 모델로 블로그 글 작성
         from ..utils.perplexity_client import get_perplexity_client
 
         perplexity_client = get_perplexity_client()
-        state.add_log("Perplexity를 통한 블로그 글 생성 시작")
+        state.add_log("sonar-pro 모델을 통한 블로그 글 생성 시작")
 
         state.update_progress("블로그 글 작성 중", 30)
 
@@ -51,23 +51,26 @@ async def blog_writing_node(state: BlogState) -> Dict[str, Any]:
         content_summary = create_content_summary(state.collected_content)
 
         blog_writing_prompt = f"""
-다음 정보를 바탕으로 '{state.topic}'에 대한 완성된 블로그 글을 한국어로 작성해주세요.
+다음 정보를 바탕으로 '{state.topic}'에 대한 자연스럽고 흥미로운 블로그 글을 한국어로 작성해주세요.
 
 수집된 정보:
 {content_summary}
 
-요구사항:
+작성 가이드라인:
 1. 2000-3000자 분량의 완성된 블로그 글
-2. 매력적인 제목과 구조화된 내용 (서론, 본론, 결론)
-3. 독자가 {state.target_audience}이고 톤은 {state.tone}로 작성
-4. 실용적이고 유익한 정보 제공
-5. 자연스러운 한국어 문체
+2. 독자의 관심을 끌 수 있는 매력적인 제목
+3. 자연스러운 문단 구성으로 정보를 체계적으로 전달
+4. 딱딱한 카테고리 구분 없이 이야기하듯 자연스럽게 흘러가는 글
+5. 독자가 읽기 쉽고 이해하기 쉬운 친근한 문체
+6. 실용적인 정보와 최신 동향을 자연스럽게 녹여서 제공
+7. 결론에서는 핵심 내용을 간단히 정리하고 독자에게 도움이 되는 마무리
 
+독자가 마지막까지 흥미롭게 읽을 수 있는 자연스러운 정보성 블로그 글로 작성해주세요.
 마크다운 형식으로 작성해주세요.
         """
 
-        # Perplexity로 블로그 글 생성
-        response = await perplexity_client.search(blog_writing_prompt, max_results=1)
+        # sonar-pro 모델로 블로그 글 생성
+        response = await perplexity_client.generate_blog_post(blog_writing_prompt, state.topic)
         blog_content = response.content
 
         # BlogArticle 객체 생성
@@ -155,7 +158,6 @@ def validate_content_for_writing(collected_content) -> Dict[str, Any]:
     content_types_count = sum([
         len(collected_content.basic_concepts) > 0,
         len(collected_content.latest_trends) > 0,
-        len(collected_content.practical_cases) > 0,
         len(collected_content.expert_opinions) > 0
     ])
 
@@ -343,32 +345,27 @@ def generate_quality_recommendations(quality_factors: Dict[str, float]) -> list:
 
 
 def create_content_summary(collected_content: CollectedContent) -> str:
-    """수집된 콘텐츠를 요약 문자열로 변환"""
+    """수집된 콘텐츠를 통합 요약 문자열로 변환"""
     summary = f"주제: {collected_content.topic}\n\n"
 
-    if collected_content.basic_concepts:
-        summary += "== 기본 개념 ==\n"
-        for source in collected_content.basic_concepts[:3]:
-            summary += f"- {source.title}: {source.summary}\n"
-        summary += "\n"
+    # 모든 소스를 하나로 통합하여 제공
+    all_sources = collected_content.get_all_sources()
 
-    if collected_content.latest_trends:
-        summary += "== 최신 트렌드 ==\n"
-        for source in collected_content.latest_trends[:3]:
-            summary += f"- {source.title}: {source.summary}\n"
-        summary += "\n"
+    if all_sources:
+        summary += "== 수집된 정보 ==\n"
 
-    if collected_content.practical_cases:
-        summary += "== 실무 활용 사례 ==\n"
-        for source in collected_content.practical_cases[:3]:
-            summary += f"- {source.title}: {source.summary}\n"
-        summary += "\n"
+        # 다양한 타입의 정보를 자연스럽게 섞어서 제공
+        for i, source in enumerate(all_sources[:10], 1):  # 최대 10개까지
+            summary += f"{i}. {source.title}\n"
+            summary += f"   {source.summary}\n"
+            if source.content and len(source.content) > 100:
+                # 긴 콘텐츠는 일부만 포함
+                summary += f"   상세내용: {source.content[:200]}...\n"
+            summary += "\n"
 
-    if collected_content.expert_opinions:
-        summary += "== 전문가 의견 ==\n"
-        for source in collected_content.expert_opinions[:3]:
-            summary += f"- {source.title}: {source.summary}\n"
-        summary += "\n"
+    # 전체적인 정보 개요 추가
+    summary += f"총 {collected_content.total_sources}개의 신뢰할 수 있는 소스에서 수집된 정보입니다.\n"
+    summary += "이 정보들을 바탕으로 독자에게 유용하고 흥미로운 블로그 글을 작성해주세요.\n"
 
     return summary
 

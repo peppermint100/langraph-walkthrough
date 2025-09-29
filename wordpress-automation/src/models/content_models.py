@@ -7,7 +7,6 @@ from enum import Enum
 class ContentType(str, Enum):
     BASIC_CONCEPT = "basic_concept"
     LATEST_TREND = "latest_trend"
-    PRACTICAL_CASE = "practical_case"
     EXPERT_OPINION = "expert_opinion"
 
 
@@ -31,7 +30,6 @@ class CollectedContent(BaseModel):
     topic: str = Field(..., description="검색 주제")
     basic_concepts: List[SourceInfo] = Field(default_factory=list, description="기본 개념 관련 정보")
     latest_trends: List[SourceInfo] = Field(default_factory=list, description="최신 트렌드 정보")
-    practical_cases: List[SourceInfo] = Field(default_factory=list, description="실무 활용 사례")
     expert_opinions: List[SourceInfo] = Field(default_factory=list, description="전문가 의견")
     collection_timestamp: str = Field(default_factory=lambda: datetime.now().isoformat(), description="수집 시각")
     total_sources: int = Field(default=0, description="총 수집된 소스 수")
@@ -42,17 +40,14 @@ class CollectedContent(BaseModel):
             self.basic_concepts.append(source)
         elif source.content_type == ContentType.LATEST_TREND:
             self.latest_trends.append(source)
-        elif source.content_type == ContentType.PRACTICAL_CASE:
-            self.practical_cases.append(source)
         elif source.content_type == ContentType.EXPERT_OPINION:
             self.expert_opinions.append(source)
 
-        self.total_sources = len(self.basic_concepts + self.latest_trends +
-                                self.practical_cases + self.expert_opinions)
+        self.total_sources = len(self.basic_concepts + self.latest_trends + self.expert_opinions)
 
     def get_all_sources(self) -> List[SourceInfo]:
         """모든 소스를 하나의 리스트로 반환"""
-        return self.basic_concepts + self.latest_trends + self.practical_cases + self.expert_opinions
+        return self.basic_concepts + self.latest_trends + self.expert_opinions
 
     def get_sources_by_type(self, content_type: ContentType) -> List[SourceInfo]:
         """특정 타입의 소스만 반환"""
@@ -60,8 +55,6 @@ class CollectedContent(BaseModel):
             return self.basic_concepts
         elif content_type == ContentType.LATEST_TREND:
             return self.latest_trends
-        elif content_type == ContentType.PRACTICAL_CASE:
-            return self.practical_cases
         elif content_type == ContentType.EXPERT_OPINION:
             return self.expert_opinions
         return []
